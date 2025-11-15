@@ -18,7 +18,7 @@
   * Ideally the workspace name and/or color.
 * Avoid:
 
-  * Any dependency on `chrome.tabGroups.*` (no grouping, no Saved Tab Groups).
+  * Any dependency on Chrome's tab group APIs (no grouping, no Saved Tab Groups).
   * Chrome/Brave sync bloat caused by tab groups.
 
 ### Platform constraints
