@@ -70,18 +70,18 @@ function updateFavicon(colorHex, workspaceName = "", showLetter = true) {
 	if (!ctx) return
 
 	drawRoundedRect(ctx, {
-		x: 2,
-		y: 2,
-		width: 60,
-		height: 60,
+		x: 0,
+		y: 0,
+		width: 64,
+		height: 64,
 		radius: 14,
 		color: colorHex
 	})
 
 	if (showLetter) {
 		const letter = workspaceName?.trim()?.charAt(0)?.toUpperCase() || "?"
-		ctx.fillStyle = "#ffffff"
-		ctx.font = "bold 30px Inter, 'Segoe UI', sans-serif"
+		ctx.fillStyle = getContrastingTextColor(colorHex)
+		ctx.font = "bold 36px Inter, 'Segoe UI', sans-serif"
 		ctx.textAlign = "center"
 		ctx.textBaseline = "middle"
 		ctx.fillText(letter, 32, 34)
@@ -111,4 +111,15 @@ function drawRoundedRect(ctx, { x, y, width, height, radius, color }) {
 	ctx.quadraticCurveTo(x, y, x + radius, y)
 	ctx.closePath()
 	ctx.fill()
+}
+
+function getContrastingTextColor(hexColor) {
+	if (!hexColor) return "#ffffff"
+	const normalized = hexColor.replace("#", "")
+	const bigint = parseInt(normalized, 16)
+	const r = (bigint >> 16) & 255
+	const g = (bigint >> 8) & 255
+	const b = bigint & 255
+	const luminance = 0.299 * r + 0.587 * g + 0.114 * b
+	return luminance > 170 ? "#111111" : "#ffffff"
 }
