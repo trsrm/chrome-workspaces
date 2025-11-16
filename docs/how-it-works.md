@@ -135,27 +135,7 @@ We can’t recolor the title bar, but we can combine several mechanisms.
     * Hover tooltip shows the full title.
 * It also gives you a **reliable, persistent marker** for mapping windows back to workspaces after restarts.
 
-### 3.2. Extension action badge per window
-
-Use `chrome.action.setBadgeText` and `setBadgeBackgroundColor` **per-tab**:
-
-* When a tab becomes active:
-
-  * Look up windowId → workspaceId.
-  * If bound:
-
-    * `setBadgeText({ tabId, text: shortLabel })` e.g. `S`, `DEV`, or just `1`.
-    * `setBadgeBackgroundColor({...})` to workspace color.
-  * If the window is not a workspace:
-
-    * Clear badge.
-
-Result:
-
-* Each workspace window’s toolbar icon will show its short code + color.
-* Good quick indicator while still minimal.
-
-### 3.3. Optional: title prefix injection (aggressive)
+### 3.2. Optional: title prefix injection (aggressive)
 
 **Feature flag, off by default.**
 

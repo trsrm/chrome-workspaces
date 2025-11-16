@@ -6,7 +6,6 @@ import SyncStorage from "./SyncStorage.js"
 * @property {"top" | "bottom"} addPosition Add new items to the top or to the bottom.
 * @property {"keep_open" | "minimize" | "close"} otherWorkspaces How to handle the current workspaces when opening a new workspace.
 * @property {"manual" | "name"} sorting Workspace list sorting.
-* @property {"enabled" | "disabled"} workspaceBadge Whether to show the toolbar badge indicator.
 * @property {"enabled" | "disabled"} markerIconLetter Whether to draw letters on the marker favicon.
 */
 
@@ -14,7 +13,6 @@ const Key = {
     ADD_POSITION: "addPosition",
     SORTING: "sorting",
     OTHER_WORKSPACES: "otherWorkspaces",
-    WORKSPACE_BADGE: "workspaceBadge",
     MARKER_ICON_LETTER: "markerIconLetter",
 }
 
@@ -22,7 +20,6 @@ const defaultOptions = {
     [Key.ADD_POSITION]: "bottom",
     [Key.SORTING]: "manual",
     [Key.OTHER_WORKSPACES]: "keep_open",
-    [Key.WORKSPACE_BADGE]: "enabled",
     [Key.MARKER_ICON_LETTER]: "enabled",
 }
 

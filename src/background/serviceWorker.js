@@ -2,7 +2,6 @@ import "./importLibraries.js"
 
 import Workspace from "../workspace/Workspace.js"
 import Config from "../storage/Config.js"
-import Options from "../storage/Options.js"
 import Action from "../Action.js"
 import WorkspaceList from "../workspace/WorkspaceList.js"
 import WorkspaceUpdateService from "../service/WorkspaceUpdateService.js"
@@ -12,23 +11,12 @@ import ContextMenuService from "../service/ContextMenuService.js"
 import PermissionsService from "../service/PermissionsService.js"
 import Observable from "../util/Observable.js"
 import { getUrlParams, isWorkspaceMarkerUrl } from "../util/utils.js"
-import WorkspaceColor from "../workspace/WorkspaceColor.js"
 
 globalThis.isBackground = true
 
 const { WindowType } = chrome.windows
 
-const OPTIONS_STORAGE_KEY = "options"
-let cachedOptionsPromise = null
-
 ContextMenuService.initialize()
-
-chrome.storage.onChanged.addListener((changes, areaName) => {
-	if (areaName === "sync" && OPTIONS_STORAGE_KEY in changes) {
-		invalidateOptionsCache()
-		refreshBadgeForCurrentContext().catch((error) => console.error("refreshBadgeForCurrentContext", error))
-	}
-})
 
 chrome.runtime.onMessage.addListener(handleMessage)
 chrome.runtime.onInstalled.addListener(handleInstall)
@@ -42,7 +30,6 @@ chrome.tabs.onAttached.addListener(handleTabAttach)
 chrome.tabs.onDetached.addListener(handleTabDetach)
 chrome.windows.onCreated.addListener(handleWindowOpen)
 chrome.windows.onRemoved.addListener(handleWindowClose)
-chrome.windows.onFocusChanged.addListener(handleWindowFocusChanged)
 
 
 async function handleMessage(request, sender, sendResponse) {
@@ -71,7 +58,6 @@ async function handleTabActivate({ windowId, tabId }) {
 	const openingWorkspace = await Config.get(Config.Key.OPENING_WORKSPACE)
 
 	if (!openingWorkspace) {
-		await updateBadgeForActiveTab(tabId, windowId)
 		WorkspaceUpdateService.scheduleUpdate(windowId)
 	}
 }
@@ -114,21 +100,6 @@ async function handleTabAttach(tabId, attachInfo) {
 
 async function handleTabDetach(tabId, { oldWindowId }) {
 	WorkspaceUpdateService.scheduleUpdate(oldWindowId)
-}
-
-async function handleWindowFocusChanged(windowId) {
-	if (windowId === chrome.windows.WINDOW_ID_NONE) {
-		await setBadgeTextSafe({ text: "" })
-		return
-	}
-
-	const [activeTab] = await chrome.tabs.query({ active: true, windowId })
-	if (!activeTab) {
-		await setBadgeTextSafe({ text: "" })
-		return
-	}
-
-	await updateBadgeForActiveTab(activeTab.id, windowId)
 }
 
 async function handleWindowOpen(window) {
@@ -193,112 +164,4 @@ async function findWorkspaceForWindowByMarker(windowId) {
 	}
 
 	return null
-}
-
-function invalidateOptionsCache() {
-	cachedOptionsPromise = null
-}
-
-async function getOptionsCached() {
-	if (!cachedOptionsPromise) {
-		cachedOptionsPromise = Options.get()
-	}
-
-	return cachedOptionsPromise
-}
-
-async function refreshBadgeForCurrentContext() {
-	try {
-		const window = await chrome.windows.getLastFocused({ windowTypes: ["normal"] })
-		if (!window || window.id === chrome.windows.WINDOW_ID_NONE) {
-			await setBadgeTextSafe({ text: "" })
-			return
-		}
-
-		const [tab] = await chrome.tabs.query({ active: true, windowId: window.id })
-		if (tab) {
-			await updateBadgeForActiveTab(tab.id, window.id)
-		} else {
-			await setBadgeTextSafe({ text: "" })
-		}
-	} catch {
-		await setBadgeTextSafe({ text: "" })
-	}
-}
-
-async function updateBadgeForActiveTab(tabId, windowId) {
-	if (!windowId || !tabId) {
-		await setBadgeTextSafe({ text: "", tabId })
-		return
-	}
-
-	const options = await getOptionsCached()
-	if (options[Options.Key.WORKSPACE_BADGE] === "disabled") {
-		await setBadgeTextSafe({ tabId, text: "" })
-		return
-	}
-
-	const workspaceId = await WorkspaceList.findWorkspaceForWindow(windowId)
-	if (!workspaceId) {
-		await setBadgeTextSafe({ text: "", tabId })
-		return
-	}
-
-	const workspace = await Workspace.get(workspaceId)
-	if (!workspace) {
-		await setBadgeTextSafe({ text: "", tabId })
-		return
-	}
-
-	const label = getWorkspaceBadgeLabel(workspace.name)
-	await setBadgeBackgroundColorSafe({
-		color: hexToRgbaArray(WorkspaceColor[workspace.color] ?? "#555555"),
-		tabId
-	})
-	await setBadgeTextSafe({ tabId, text: label })
-}
-
-function getWorkspaceBadgeLabel(name) {
-	if (!name) return "?"
-	const sanitized = name.replace(/[^a-zA-Z0-9]/g, "")
-	const label = sanitized.slice(0, 3).toUpperCase()
-	return label || name.trim().slice(0, 1).toUpperCase() || "?"
-}
-
-function hexToRgbaArray(hex) {
-	const normalized = hex.replace("#", "")
-	const bigint = parseInt(normalized, 16)
-	const r = (bigint >> 16) & 255
-	const g = (bigint >> 8) & 255
-	const b = bigint & 255
-	return [r, g, b, 255]
-}
-
-async function setBadgeTextSafe(details) {
-	try {
-		await chrome.action.setBadgeText(details)
-	} catch (error) {
-		if (!shouldSuppressTabError(error, details)) {
-			throw error
-		}
-	}
-}
-
-async function setBadgeBackgroundColorSafe(details) {
-	try {
-		await chrome.action.setBadgeBackgroundColor(details)
-	} catch (error) {
-		if (!shouldSuppressTabError(error, details)) {
-			throw error
-		}
-	}
-}
-
-function shouldSuppressTabError(error, details) {
-	return Boolean(
-		details?.tabId &&
-		error &&
-		typeof error.message === "string" &&
-		error.message.includes("No tab with id")
-	)
 }
