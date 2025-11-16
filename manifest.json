@@ -1,6 +1,6 @@
 {
   "name": "Workspaces",
-  "version": "0.7",
+  "version": "0.8",
   "manifest_version": 3,
   "description": "Organize browser tabs into workspaces.",
   "homepage_url": "https://github.com/vsmejkal/chrome-workspaces",
@@ -32,8 +32,7 @@
   "permissions": [
     "contextMenus",
     "storage",
-    "tabs",
-    "tabGroups"
+    "tabs"
   ],
   "optional_host_permissions": [
     "file://*/*"

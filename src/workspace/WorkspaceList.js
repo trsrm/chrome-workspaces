@@ -68,6 +68,10 @@ const WorkspaceList = {
 		})
 	},
 
+	/**
+	 * Lookup the workspace currently bound to the given window.
+	 * All tabs inside the window are treated as belonging to that workspace.
+	 */
 	async findWorkspaceForWindow(windowId) {
 		assert(windowId)
 		const list = await WorkspaceList.getItems()
@@ -83,6 +87,9 @@ const WorkspaceList = {
 	},
 
 	async initialize() {
+		// On startup we do not trust persisted window IDs; Chrome will assign new
+		// IDs to restored windows, so we clear bindings and allow runtime events
+		// (marker tabs, explicit opens) to reattach.
 		await WorkspaceList.updateItems((list) => {
 			for (const item of list) {
 				item.windowId = undefined

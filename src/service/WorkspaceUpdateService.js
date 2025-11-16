@@ -5,6 +5,8 @@ const refreshPeriod = 200 // ms
 let refreshTimer = null
 
 function scheduleUpdate(windowId) {
+	if (!windowId) return
+
 	windowsToSync.add(windowId)
 
 	if (!refreshTimer) {
@@ -13,6 +15,8 @@ function scheduleUpdate(windowId) {
 }
 
 function cancelUpdate(windowId) {
+	if (!windowId) return
+
 	windowsToSync.delete(windowId)
 }
 
@@ -25,6 +29,8 @@ async function updateScheduled() {
 }
 
 async function update(windowId) {
+	if (!windowId) return
+
 	windowsToSync.delete(windowId)
 
 	await Workspace.sync(windowId)

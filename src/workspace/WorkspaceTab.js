@@ -1,3 +1,5 @@
+import { isWorkspaceMarkerUrl } from "../util/utils.js"
+
 /**
  * @typedef {Object} WorkspaceTab
  * @property {?string} title
@@ -10,12 +12,18 @@ const WorkspaceTab = {
 	/**
 	 * Create a new workspace tab from a browser tab.
 	 * @param tab Browser tab
-	 * @returns {WorkspaceTab}
+	 * @returns {WorkspaceTab|null}
 	 */
 	create(tab) {
+		const url = tab.url ?? tab.pendingUrl
+
+		if (isWorkspaceMarkerUrl(url)) {
+			return null
+		}
+
 		const workspaceTab = {
 			title: tab.title?.slice(0, 40),
-			url: tab.url ?? tab.pendingUrl
+			url
 		}
 		if (tab.pinned) {
 			workspaceTab.pinned = true
@@ -35,7 +43,7 @@ const WorkspaceTab = {
 	async createAllFromWindow(windowId) {
 		const tabs = await chrome.tabs.query({ windowId })
 
-		return tabs.map(WorkspaceTab.create)
+		return tabs.map(WorkspaceTab.create).filter(Boolean)
 	},
 
 	/**

@@ -1,6 +1,6 @@
 import Config from "../storage/Config.js"
 import Options from "../storage/Options.js"
-import { windowExists } from "../util/utils.js"
+import { getWorkspaceMarkerUrl, windowExists } from "../util/utils.js"
 import Workspace from "../workspace/Workspace.js"
 import WorkspaceList from "../workspace/WorkspaceList.js"
 import TabSuspendService from "./TabSuspendService.js"
@@ -61,8 +61,9 @@ async function checkInvalidTabs(workspace) {
 }
 
 async function createWorkspaceWindow(workspace, currentWindow) {
+    const markerUrl = getWorkspaceMarkerUrl(workspace.id)
     const createArgs = {
-        url: workspace.tabs.map(tab => tab.url),
+        url: [markerUrl, ...workspace.tabs.map(tab => tab.url)],
         focused: true,
     }
 
@@ -79,23 +80,33 @@ async function createWorkspaceWindow(workspace, currentWindow) {
 
     const window = await chrome.windows.create(createArgs)
 
-    updateWindowTabs(workspace, window)
+    if (window.tabs?.[0]) {
+        await chrome.tabs.update(window.tabs[0].id, { pinned: true, active: false })
+    }
+
+    await updateWindowTabs(workspace, window)
 
     return window
 }
 
-function updateWindowTabs(workspace, window) {
-    workspace.tabs.forEach(({ url, active = false, pinned = false}, index) => {
-        const tabId = window.tabs[index].id
+async function updateWindowTabs(workspace, window) {
+    const updatePromises = []
 
-        if (url.startsWith("http")) {
+    workspace.tabs.forEach(({ url, active = false, pinned = false}, index) => {
+        const browserTab = window.tabs[index + 1]
+        if (!browserTab) return
+        const tabId = browserTab.id
+
+        if (url?.startsWith("http")) {
             TabSuspendService.scheduleSuspend(tabId)
         }
 
         if (active || pinned) {
-            chrome.tabs.update(tabId, { active, pinned })
+            updatePromises.push(chrome.tabs.update(tabId, { active, pinned }))
         }
     })
+
+    await Promise.all(updatePromises)
 }
 
 async function handleOldWindow(window) {

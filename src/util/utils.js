@@ -3,9 +3,47 @@ export function randomString(length) {
 }
 
 export function getUrlParams(url) {
-	return Object.fromEntries(
-		url.split("?")[1].split("&").map(keyValue => keyValue.split("="))
-	);
+	if (!url) return {}
+
+	try {
+		const searchParams = new URL(url).searchParams
+		return Object.fromEntries(searchParams.entries())
+	} catch {
+		return {}
+	}
+}
+
+export const WORKSPACE_MARKER_PATH = "src/pages/workspace-marker/workspace-marker.html"
+
+let workspaceMarkerUrlPrefix
+
+function getWorkspaceMarkerUrlPrefix() {
+	if (!workspaceMarkerUrlPrefix) {
+		if (typeof chrome !== "undefined" && chrome?.runtime?.getURL) {
+			workspaceMarkerUrlPrefix = chrome.runtime.getURL(WORKSPACE_MARKER_PATH)
+		} else {
+			workspaceMarkerUrlPrefix = WORKSPACE_MARKER_PATH
+		}
+	}
+
+	return workspaceMarkerUrlPrefix
+}
+
+export function getWorkspaceMarkerUrl(workspaceId) {
+	const prefix = getWorkspaceMarkerUrlPrefix()
+	if (!workspaceId) return prefix
+
+	return `${prefix}?workspaceId=${encodeURIComponent(workspaceId)}`
+}
+
+export function isWorkspaceMarkerUrl(url) {
+	if (!url) return false
+
+	try {
+		return url.startsWith(getWorkspaceMarkerUrlPrefix())
+	} catch {
+		return false
+	}
 }
 
 /**

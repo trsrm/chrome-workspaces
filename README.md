@@ -4,7 +4,7 @@
 
 Workspaces is a Chrome extension for simple tab management.
 
-Each workspace automatically saves open tabs within a given window so you can restore them later with a single click.
+Each workspace automatically saves the tabs in its dedicated browser window (Workspaces no longer relies on Chrome Tab Groups). When you reopen a workspace, a new window is created with the exact set of tabs you left off, plus a small pinned “marker tab” that identifies the workspace so the extension can reattach to it after restarts.
 
 [![Workspaces in Chrome Web Store](https://github.com/vsmejkal/chrome-workspaces/blob/master/media/chrome-webstore-badge.png?raw=true)](https://chrome.google.com/webstore/detail/workspaces/hpljjefgmnkloakbfckghmlapghabgfa)
 

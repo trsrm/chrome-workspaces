@@ -1,0 +1,62 @@
+body {
+    font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    background: #0b1724;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+main {
+    text-align: center;
+    padding: 32px;
+}
+
+.subtitle {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    opacity: 0.7;
+    margin: 0 0 8px;
+}
+
+#workspace-name {
+    font-size: 32px;
+    margin: 0 0 16px;
+}
+
+#workspace-badge {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto;
+    border-radius: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+#copy-tabs-button {
+    margin-top: 24px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.05s ease;
+}
+
+#copy-tabs-button:hover {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+    transition: 0.05s ease;
+}
+
+#copy-feedback {
+    margin-top: 12px;
+    font-size: 14px;
+    opacity: 0.85;
+}
