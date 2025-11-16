@@ -24,6 +24,13 @@ function getWorkspaceMarkerUrlPrefix() {
 	return workspaceMarkerUrlPrefix
 }
 
+export function getWorkspaceMarkerUrl(workspaceId) {
+	const prefix = getWorkspaceMarkerUrlPrefix()
+	if (!workspaceId) return prefix
+
+	return `${prefix}?workspaceId=${encodeURIComponent(workspaceId)}`
+}
+
 export function isWorkspaceMarkerUrl(url) {
 	if (!url) return false
 
