@@ -1,10 +1,12 @@
 import Workspace from "../../workspace/Workspace.js"
 import WorkspaceColor from "../../workspace/WorkspaceColor.js"
 import Options from "../../storage/Options.js"
-import { getUrlParams } from "../../util/utils.js"
+import { getUrlParams, isWorkspaceMarkerUrl } from "../../util/utils.js"
 
 const params = getUrlParams(window.location.href)
 const workspaceId = params.workspaceId
+let workspaceTabsSnapshot = []
+let workspaceWindowId = null
 
 async function initialize() {
     if (!workspaceId) {
@@ -21,8 +23,10 @@ async function initialize() {
         return
     }
 
+    workspaceTabsSnapshot = workspace.tabs ?? []
     renderWorkspace(workspace, options)
     wireCopyButton(workspace)
+    loadLiveTabs().catch((error) => console.warn("workspace-marker: live tab load failed", error))
 }
 
 function renderWorkspace(workspace, options) {
@@ -54,9 +58,11 @@ function wireCopyButton(workspace) {
 	}
 
 	button.addEventListener("click", async () => {
-		if (!workspace?.tabs) return
+		const liveTabs = await fetchLiveTabs()
+		const tabsToCopy = liveTabs.length > 0 ? liveTabs : workspaceTabsSnapshot
+		if (!tabsToCopy || tabsToCopy.length === 0) return
 
-		const lines = workspace.tabs.map((tab) => {
+		const lines = tabsToCopy.map((tab) => {
 			const title = tab.title?.trim() || "(Untitled)"
 			const url = tab.url || ""
 			return `${title}\n${url}`
@@ -90,6 +96,64 @@ initialize().catch((error) => {
 	console.error("workspace-marker", error)
 	renderError("Error loading workspace")
 })
+
+async function loadLiveTabs() {
+	try {
+		const currentWindow = await getCurrentWindow()
+		workspaceWindowId = currentWindow?.id ?? null
+		const liveTabs = await fetchLiveTabs()
+		if (liveTabs.length > 0) {
+			workspaceTabsSnapshot = liveTabs
+		}
+	} catch (error) {
+		console.warn("workspace-marker: unable to read live tabs", error)
+	}
+}
+
+async function fetchLiveTabs() {
+	try {
+		if (!workspaceWindowId) {
+			const currentWindow = await getCurrentWindow()
+			workspaceWindowId = currentWindow?.id ?? null
+		}
+
+		if (!workspaceWindowId) return []
+
+		const tabs = await queryTabs({ windowId: workspaceWindowId })
+		return tabs
+			.filter((tab) => {
+				const url = tab.url ?? tab.pendingUrl ?? ""
+				return url && !isWorkspaceMarkerUrl(url) && url !== "chrome://newtab/"
+			})
+			.map((tab) => ({
+				title: tab.title?.trim() || "(Untitled)",
+				url: tab.url ?? tab.pendingUrl ?? ""
+			}))
+	} catch (error) {
+		console.warn("workspace-marker: fetchLiveTabs failed", error)
+		return []
+	}
+}
+
+function getCurrentWindow() {
+	return new Promise((resolve, reject) => {
+		try {
+			chrome.windows.getCurrent((window) => resolve(window))
+		} catch (error) {
+			reject(error)
+		}
+	})
+}
+
+function queryTabs(queryInfo) {
+	return new Promise((resolve, reject) => {
+		try {
+			chrome.tabs.query(queryInfo, (tabs) => resolve(tabs))
+		} catch (error) {
+			reject(error)
+		}
+	})
+}
 
 function shouldShowMarkerLetter(options) {
 	const preference = options?.[Options.Key.MARKER_ICON_LETTER] ?? "enabled"

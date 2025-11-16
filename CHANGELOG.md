@@ -1,3 +1,6 @@
+## Workspaces 0.8.1
+- Fix workspace marker page so newly created workspaces can copy their open tabs properly
+
 ## Workspaces 0.8
 - Removed Chrome Tab Groups dependency; workspaces now live in dedicated windows with pinned marker tabs.
 - Added workspace marker page (color-coded favicon, copy-tabs helper) and ensure markers are recreated after reloads.
