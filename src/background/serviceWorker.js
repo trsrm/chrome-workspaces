@@ -11,6 +11,7 @@ import ContextMenuService from "../service/ContextMenuService.js"
 import PermissionsService from "../service/PermissionsService.js"
 import Observable from "../util/Observable.js"
 import { getUrlParams, isWorkspaceMarkerUrl } from "../util/utils.js"
+import WorkspaceColor from "../workspace/WorkspaceColor.js"
 
 globalThis.isBackground = true
 
@@ -30,6 +31,7 @@ chrome.tabs.onAttached.addListener(handleTabAttach)
 chrome.tabs.onDetached.addListener(handleTabDetach)
 chrome.windows.onCreated.addListener(handleWindowOpen)
 chrome.windows.onRemoved.addListener(handleWindowClose)
+chrome.windows.onFocusChanged.addListener(handleWindowFocusChanged)
 
 
 async function handleMessage(request, sender, sendResponse) {
@@ -54,10 +56,11 @@ async function handleStartup() {
 	await WorkspaceList.initialize()
 }
 
-async function handleTabActivate({ windowId }) {
+async function handleTabActivate({ windowId, tabId }) {
 	const openingWorkspace = await Config.get(Config.Key.OPENING_WORKSPACE)
 
 	if (!openingWorkspace) {
+		await updateBadgeForActiveTab(tabId, windowId)
 		WorkspaceUpdateService.scheduleUpdate(windowId)
 	}
 }
@@ -100,6 +103,21 @@ async function handleTabAttach(tabId, attachInfo) {
 
 async function handleTabDetach(tabId, { oldWindowId }) {
 	WorkspaceUpdateService.scheduleUpdate(oldWindowId)
+}
+
+async function handleWindowFocusChanged(windowId) {
+	if (windowId === chrome.windows.WINDOW_ID_NONE) {
+		await chrome.action.setBadgeText({ text: "" })
+		return
+	}
+
+	const [activeTab] = await chrome.tabs.query({ active: true, windowId })
+	if (!activeTab) {
+		await chrome.action.setBadgeText({ text: "" })
+		return
+	}
+
+	await updateBadgeForActiveTab(activeTab.id, windowId)
 }
 
 async function handleWindowOpen(window) {
@@ -164,4 +182,46 @@ async function findWorkspaceForWindowByMarker(windowId) {
 	}
 
 	return null
+}
+
+async function updateBadgeForActiveTab(tabId, windowId) {
+	if (!windowId || !tabId) {
+		await chrome.action.setBadgeText({ text: "", tabId })
+		return
+	}
+
+	const workspaceId = await WorkspaceList.findWorkspaceForWindow(windowId)
+	if (!workspaceId) {
+		await chrome.action.setBadgeText({ text: "", tabId })
+		return
+	}
+
+	const workspace = await Workspace.get(workspaceId)
+	if (!workspace) {
+		await chrome.action.setBadgeText({ text: "", tabId })
+		return
+	}
+
+	const label = getWorkspaceBadgeLabel(workspace.name)
+	await chrome.action.setBadgeBackgroundColor({
+		color: hexToRgbaArray(WorkspaceColor[workspace.color] ?? "#555555"),
+		tabId
+	})
+	await chrome.action.setBadgeText({ tabId, text: label })
+}
+
+function getWorkspaceBadgeLabel(name) {
+	if (!name) return "?"
+	const sanitized = name.replace(/[^a-zA-Z0-9]/g, "")
+	const label = sanitized.slice(0, 3).toUpperCase()
+	return label || name.trim().slice(0, 1).toUpperCase() || "?"
+}
+
+function hexToRgbaArray(hex) {
+	const normalized = hex.replace("#", "")
+	const bigint = parseInt(normalized, 16)
+	const r = (bigint >> 16) & 255
+	const g = (bigint >> 8) & 255
+	const b = bigint & 255
+	return [r, g, b, 255]
 }
