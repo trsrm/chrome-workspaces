@@ -10,13 +10,14 @@ import WorkspaceOpenService from "../service/WorkspaceOpenService.js"
 import ContextMenuService from "../service/ContextMenuService.js"
 import PermissionsService from "../service/PermissionsService.js"
 import Observable from "../util/Observable.js"
-import { getUrlParams, isWorkspaceMarkerUrl } from "../util/utils.js"
+import { getUrlParams, getWorkspaceMarkerUrl, isWorkspaceMarkerUrl, windowExists } from "../util/utils.js"
 
 globalThis.isBackground = true
 
 const { WindowType } = chrome.windows
 
 ContextMenuService.initialize()
+restoreMarkerTabsForBoundWorkspaces().catch((error) => console.error("restoreMarkerTabs", error))
 
 chrome.runtime.onMessage.addListener(handleMessage)
 chrome.runtime.onInstalled.addListener(handleInstall)
@@ -52,6 +53,7 @@ async function handleMessage(request, sender, sendResponse) {
 
 async function handleStartup() {
 	await WorkspaceList.initialize()
+	await rebindWorkspacesFromMarkers()
 }
 
 async function handleTabActivate({ windowId, tabId }) {
@@ -81,6 +83,11 @@ async function handleTabRemove(tabId, { windowId, isWindowClosing }) {
 		WorkspaceUpdateService.cancelUpdate(windowId)
 	} else {
 		await WorkspaceUpdateService.update(windowId)
+
+		const workspaceId = await WorkspaceList.findWorkspaceForWindow(windowId)
+		if (workspaceId) {
+			await ensureMarkerTab(workspaceId, windowId)
+		}
 	}
 }
 
@@ -164,4 +171,55 @@ async function findWorkspaceForWindowByMarker(windowId) {
 	}
 
 	return null
+}
+
+async function rebindWorkspacesFromMarkers() {
+	const windows = await chrome.windows.getAll({ populate: true, windowTypes: ["normal"] })
+
+	for (const window of windows) {
+		const workspaceId = await findWorkspaceForWindowByMarker(window.id)
+		if (workspaceId) {
+			await WorkspaceList.update(workspaceId, window.id)
+		}
+	}
+}
+
+async function restoreMarkerTabsForBoundWorkspaces() {
+	const items = await WorkspaceList.getItems()
+
+	for (const item of items) {
+		if (!item.windowId) continue
+		await ensureMarkerTab(item.workspaceId, item.windowId)
+	}
+}
+
+async function ensureMarkerTab(workspaceId, windowId) {
+	if (!workspaceId || !windowId) return
+	const exists = await windowExists(windowId)
+	if (!exists) return
+
+	const tabs = await chrome.tabs.query({ windowId })
+	const markerTab = tabs.find((tab) => isWorkspaceMarkerUrl(tab.url ?? tab.pendingUrl))
+	const markerUrl = getWorkspaceMarkerUrl(workspaceId)
+
+	if (markerTab) {
+		if (!markerTab.pinned) {
+			await chrome.tabs.update(markerTab.id, { pinned: true })
+		}
+		if (markerTab.index !== 0) {
+			await chrome.tabs.move(markerTab.id, { index: 0 })
+		}
+		if (markerTab.url !== markerUrl) {
+			await chrome.tabs.update(markerTab.id, { url: markerUrl, active: false })
+		}
+		return
+	}
+
+	await chrome.tabs.create({
+		windowId,
+		url: markerUrl,
+		pinned: true,
+		active: false,
+		index: 0,
+	})
 }
