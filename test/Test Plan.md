@@ -30,7 +30,7 @@ This document contains a list of steps to verify proper functionality of Workspa
 - EXP `New Workspace` screen is shown
 - Set Name=`Green`, Color=`green`, Create in this window=`true`
 - Click `Create` button
-- EXP New green tab group with title `Green` is created containing all tabs of the current window
+- EXP Current browser window becomes the `Green` workspace window and a pinned marker tab (`Workspace: Green`) appears at the far left
 
 ### 2.3 Create second workspace
 - PREQ 2.2
@@ -41,7 +41,7 @@ This document contains a list of steps to verify proper functionality of Workspa
 - EXP `Create in this window` checkbox is hidden
 - Set Name=`Blue`, Color=`blue`
 - Click `Create` button
-- EXP New window is created containing blue tab group with title `Blue`
+- EXP New browser window is created for the `Blue` workspace with a pinned marker tab at index 0 followed by the workspace tabs
 
 ### 2.4 Show workspace list
 - PREQ 2.3
@@ -68,7 +68,7 @@ This document contains a list of steps to verify proper functionality of Workspa
 - Open new browser window
 - Focus the `Green` workspace window
 - Open three tabs with `google.com`, `wikipedia.org`, `seznam.cz`
-- EXP Tabs are added into the `Green` tab group
+- EXP Tabs are open in the `Green` workspace window (marker tab remains pinned at index 0)
 
 ### 3.2 Save and restore tabs
 - PREQ 3.1
@@ -76,8 +76,8 @@ This document contains a list of steps to verify proper functionality of Workspa
 - Click the Wikipedia tab to make it active
 - Close the `Green` window
 - Use other window to click the extension button and select `Green` workspace from the popup
-- EXP New window with `Green` tab group is opened
-- EXP The tab group contains Google, Wikipedia, and Seznam tabs
+- EXP New `Green` workspace window is opened
+- EXP The window contains Google, Wikipedia, and Seznam tabs
 - EXP Google tab is pinned
 - EXP Wikipedia tab is active
 
@@ -121,11 +121,12 @@ This document contains a list of steps to verify proper functionality of Workspa
 - Click `Done`
 - EXP Tab group color is now red with title `Red` 
 
-### 5.2 Update tab group properties
+### 5.2 Update marker tab information
 - PREQ 2.2
-- Edit the `Green` tab group and set title to `Red` and color to red
+- Edit the `Green` workspace (via popup) and set Name=`Red`, Color=`red`
 - Click the extension button
 - EXP Name=`Red` and Color=`red`
+- Focus the workspace window and verify the marker tab now shows `Workspace: Red` with the updated color
 
 
 ## 6. Remove workspace
@@ -149,7 +150,7 @@ This document contains a list of steps to verify proper functionality of Workspa
 - Click `Remove` button
 - EXP `Remove Workspace` screen is shown
 - Click `Remove` button
-- EXP `Green` tab group is destroyed but its tabs are preserved
+- EXP The `Green` workspace window is closed but its tabs remain open as normal tabs
 - Click the extension button
 - EXP `Green` workspace is not present in the list
 
@@ -202,12 +203,6 @@ This document contains a list of steps to verify proper functionality of Workspa
 - Attach the `example.com` tab from the other window back to the `Green` workspace window
 - Close the `Green` workspace and open it again
 - `example.com` tab exists and is active
-
-### 8.5 Ungroup tabs
-- TBD
-
-### 8.6 Close tab group
-- TBD
 
 ## 9. Keyboard control
 

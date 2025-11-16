@@ -6,20 +6,16 @@
 - [x] Mark open workspaces in the list
   
 # v0.8
-- [ ] Remove TabGroups support. 
-    > Make workspaces to be purely an extension feature:
-    > - Stored in extension storage (as they already are).
-    > - Bound to browser windows (1 workspace - 0 or 1 windows).
-    > 
-    > The extension:
-    > - Opens workspaces into windows.
-    > - Tracks tabs inside those windows.
-    > - Updates the saved state as tabs change.
-    > - Recovers workspace/window mappings on browser restart without relying on tab groups.
+- [x] Remove TabGroups support and migrate workspaces to window-only mode
+- [x] Introduce workspace marker tabs/page (with clipboard helper) and ignore markers while syncing
+- [x] Automatically rebind windows and restore marker tabs after restarts/updates
+- [x] Refresh README/Test Plan/Welcome copy for the new design
+
+# v0.9 (Next)
+- [ ] Dark theme
+- [ ] Replace chrome-extension-async with native Chrome APIs
 
 # Future Backlog
-- [ ] Dark theme
-- [ ] Get rid of chrome-extension-async lib
 - [ ] Show confirmation dialog before cleaning existing Tab Groups
 - [ ] Synchronization
 - [ ] Translations
