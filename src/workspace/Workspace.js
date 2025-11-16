@@ -110,12 +110,17 @@ const Workspace = {
 	 * @param {number} windowId
 	 */
 	async sync(windowId) {
+		if (!windowId) return
+
 		const workspaceId = await WorkspaceList.findWorkspaceForWindow(windowId)
 		if (!workspaceId) return
 
 		const workspace = await Workspace.get(workspaceId)
 		if (!workspace) return
 
+		// Workspace ownership is per-window: every tab currently open in the
+		// window belongs to this workspace snapshot (marker tabs will be
+		// filtered by later tasks before persisting).
 		const tabs = await chrome.tabs.query({ windowId })
 		workspace.tabs = tabs.map(WorkspaceTab.create)
 
