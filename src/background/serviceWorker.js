@@ -2,6 +2,7 @@ import "./importLibraries.js"
 
 import Workspace from "../workspace/Workspace.js"
 import Config from "../storage/Config.js"
+import Options from "../storage/Options.js"
 import Action from "../Action.js"
 import WorkspaceList from "../workspace/WorkspaceList.js"
 import WorkspaceUpdateService from "../service/WorkspaceUpdateService.js"
@@ -17,7 +18,17 @@ globalThis.isBackground = true
 
 const { WindowType } = chrome.windows
 
+const OPTIONS_STORAGE_KEY = "options"
+let cachedOptionsPromise = null
+
 ContextMenuService.initialize()
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+	if (areaName === "sync" && OPTIONS_STORAGE_KEY in changes) {
+		invalidateOptionsCache()
+		refreshBadgeForCurrentContext().catch((error) => console.error("refreshBadgeForCurrentContext", error))
+	}
+})
 
 chrome.runtime.onMessage.addListener(handleMessage)
 chrome.runtime.onInstalled.addListener(handleInstall)
@@ -107,13 +118,13 @@ async function handleTabDetach(tabId, { oldWindowId }) {
 
 async function handleWindowFocusChanged(windowId) {
 	if (windowId === chrome.windows.WINDOW_ID_NONE) {
-		await chrome.action.setBadgeText({ text: "" })
+		await setBadgeTextSafe({ text: "" })
 		return
 	}
 
 	const [activeTab] = await chrome.tabs.query({ active: true, windowId })
 	if (!activeTab) {
-		await chrome.action.setBadgeText({ text: "" })
+		await setBadgeTextSafe({ text: "" })
 		return
 	}
 
@@ -184,30 +195,67 @@ async function findWorkspaceForWindowByMarker(windowId) {
 	return null
 }
 
+function invalidateOptionsCache() {
+	cachedOptionsPromise = null
+}
+
+async function getOptionsCached() {
+	if (!cachedOptionsPromise) {
+		cachedOptionsPromise = Options.get()
+	}
+
+	return cachedOptionsPromise
+}
+
+async function refreshBadgeForCurrentContext() {
+	try {
+		const window = await chrome.windows.getLastFocused({ windowTypes: ["normal"] })
+		if (!window || window.id === chrome.windows.WINDOW_ID_NONE) {
+			await setBadgeTextSafe({ text: "" })
+			return
+		}
+
+		const [tab] = await chrome.tabs.query({ active: true, windowId: window.id })
+		if (tab) {
+			await updateBadgeForActiveTab(tab.id, window.id)
+		} else {
+			await setBadgeTextSafe({ text: "" })
+		}
+	} catch {
+		await setBadgeTextSafe({ text: "" })
+	}
+}
+
 async function updateBadgeForActiveTab(tabId, windowId) {
 	if (!windowId || !tabId) {
-		await chrome.action.setBadgeText({ text: "", tabId })
+		await setBadgeTextSafe({ text: "", tabId })
+		return
+	}
+
+	const options = await getOptionsCached()
+	if (options[Options.Key.WORKSPACE_BADGE] === "disabled") {
+		await setBadgeTextSafe({ tabId, text: "" })
 		return
 	}
 
 	const workspaceId = await WorkspaceList.findWorkspaceForWindow(windowId)
 	if (!workspaceId) {
-		await chrome.action.setBadgeText({ text: "", tabId })
+		await setBadgeTextSafe({ text: "", tabId })
 		return
 	}
 
 	const workspace = await Workspace.get(workspaceId)
 	if (!workspace) {
-		await chrome.action.setBadgeText({ text: "", tabId })
+		await setBadgeTextSafe({ text: "", tabId })
 		return
 	}
 
 	const label = getWorkspaceBadgeLabel(workspace.name)
-	await chrome.action.setBadgeBackgroundColor({
+	await setBadgeBackgroundColorSafe({
 		color: hexToRgbaArray(WorkspaceColor[workspace.color] ?? "#555555"),
 		tabId
 	})
-	await chrome.action.setBadgeText({ tabId, text: label })
+	await setBadgeTextSafe({ tabId, text: label })
 }
 
 function getWorkspaceBadgeLabel(name) {
@@ -224,4 +272,33 @@ function hexToRgbaArray(hex) {
 	const g = (bigint >> 8) & 255
 	const b = bigint & 255
 	return [r, g, b, 255]
+}
+
+async function setBadgeTextSafe(details) {
+	try {
+		await chrome.action.setBadgeText(details)
+	} catch (error) {
+		if (!shouldSuppressTabError(error, details)) {
+			throw error
+		}
+	}
+}
+
+async function setBadgeBackgroundColorSafe(details) {
+	try {
+		await chrome.action.setBadgeBackgroundColor(details)
+	} catch (error) {
+		if (!shouldSuppressTabError(error, details)) {
+			throw error
+		}
+	}
+}
+
+function shouldSuppressTabError(error, details) {
+	return Boolean(
+		details?.tabId &&
+		error &&
+		typeof error.message === "string" &&
+		error.message.includes("No tab with id")
+	)
 }

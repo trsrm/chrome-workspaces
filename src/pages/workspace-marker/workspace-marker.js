@@ -1,5 +1,6 @@
 import Workspace from "../../workspace/Workspace.js"
 import WorkspaceColor from "../../workspace/WorkspaceColor.js"
+import Options from "../../storage/Options.js"
 import { getUrlParams } from "../../util/utils.js"
 
 const params = getUrlParams(window.location.href)
@@ -11,16 +12,19 @@ async function initialize() {
         return
     }
 
-    const workspace = await Workspace.get(workspaceId)
+    const [workspace, options] = await Promise.all([
+        Workspace.get(workspaceId),
+        Options.get()
+    ])
     if (!workspace) {
         renderError("Workspace not found")
         return
     }
 
-    renderWorkspace(workspace)
+    renderWorkspace(workspace, options)
 }
 
-function renderWorkspace(workspace) {
+function renderWorkspace(workspace, options) {
 	const title = `Workspace: ${workspace.name}`
 	document.title = title
 
@@ -36,7 +40,8 @@ function renderWorkspace(workspace) {
 		badgeElement.style.background = color
 	}
 
-	updateFavicon(color, workspace.name)
+	const showLetter = shouldShowMarkerLetter(options)
+	updateFavicon(color, workspace.name, showLetter)
 }
 
 function renderError(message) {
@@ -52,7 +57,12 @@ initialize().catch((error) => {
 	renderError("Error loading workspace")
 })
 
-function updateFavicon(colorHex, workspaceName = "") {
+function shouldShowMarkerLetter(options) {
+	const preference = options?.[Options.Key.MARKER_ICON_LETTER] ?? "enabled"
+	return preference !== "disabled"
+}
+
+function updateFavicon(colorHex, workspaceName = "", showLetter = true) {
 	const canvas = document.createElement("canvas")
 	canvas.width = 64
 	canvas.height = 64
@@ -68,12 +78,14 @@ function updateFavicon(colorHex, workspaceName = "") {
 		color: colorHex
 	})
 
-	const letter = workspaceName?.trim()?.charAt(0)?.toUpperCase() || "?"
-	ctx.fillStyle = "#ffffff"
-	ctx.font = "bold 30px Inter, 'Segoe UI', sans-serif"
-	ctx.textAlign = "center"
-	ctx.textBaseline = "middle"
-	ctx.fillText(letter, 32, 34)
+	if (showLetter) {
+		const letter = workspaceName?.trim()?.charAt(0)?.toUpperCase() || "?"
+		ctx.fillStyle = "#ffffff"
+		ctx.font = "bold 30px Inter, 'Segoe UI', sans-serif"
+		ctx.textAlign = "center"
+		ctx.textBaseline = "middle"
+		ctx.fillText(letter, 32, 34)
+	}
 
 	const dataUrl = canvas.toDataURL("image/png")
 	let link = document.querySelector("link[rel*='icon']")
