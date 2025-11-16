@@ -119,10 +119,10 @@ const Workspace = {
 		if (!workspace) return
 
 		// Workspace ownership is per-window: every tab currently open in the
-		// window belongs to this workspace snapshot (marker tabs will be
-		// filtered by later tasks before persisting).
+		// window belongs to this workspace snapshot (WorkspaceTab filters out
+		// internal marker tabs before persisting).
 		const tabs = await chrome.tabs.query({ windowId })
-		workspace.tabs = tabs.map(WorkspaceTab.create)
+		workspace.tabs = tabs.map(WorkspaceTab.create).filter(Boolean)
 
 		await Workspace.save(workspace)
 	},

@@ -19,7 +19,7 @@ async function moveTabsToWorkspace(workspaceId) {
         return
     }
 
-    const workspaceTabs = tabs.map(WorkspaceTab.create)
+    const workspaceTabs = tabs.map(WorkspaceTab.create).filter(Boolean)
     workspace.tabs = workspace.tabs.concat(workspaceTabs)
     await Workspace.save(workspace)
     

@@ -8,6 +8,32 @@ export function getUrlParams(url) {
 	);
 }
 
+export const WORKSPACE_MARKER_PATH = "src/pages/workspace-marker/workspace-marker.html"
+
+let workspaceMarkerUrlPrefix
+
+function getWorkspaceMarkerUrlPrefix() {
+	if (!workspaceMarkerUrlPrefix) {
+		if (typeof chrome !== "undefined" && chrome?.runtime?.getURL) {
+			workspaceMarkerUrlPrefix = chrome.runtime.getURL(WORKSPACE_MARKER_PATH)
+		} else {
+			workspaceMarkerUrlPrefix = WORKSPACE_MARKER_PATH
+		}
+	}
+
+	return workspaceMarkerUrlPrefix
+}
+
+export function isWorkspaceMarkerUrl(url) {
+	if (!url) return false
+
+	try {
+		return url.startsWith(getWorkspaceMarkerUrlPrefix())
+	} catch {
+		return false
+	}
+}
+
 /**
  * Returns true if the browser window exists, false otherwise.
  * @returns {Promise<boolean>}
