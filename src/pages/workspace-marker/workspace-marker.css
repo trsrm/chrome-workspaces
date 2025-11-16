@@ -34,3 +34,29 @@ main {
     border-radius: 16px;
     border: 2px solid rgba(255, 255, 255, 0.4);
 }
+
+#copy-tabs-button {
+    margin-top: 24px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.05s ease;
+}
+
+#copy-tabs-button:hover {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+    transition: 0.05s ease;
+}
+
+#copy-feedback {
+    margin-top: 12px;
+    font-size: 14px;
+    opacity: 0.85;
+}

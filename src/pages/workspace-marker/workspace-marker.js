@@ -22,6 +22,7 @@ async function initialize() {
     }
 
     renderWorkspace(workspace, options)
+    wireCopyButton(workspace)
 }
 
 function renderWorkspace(workspace, options) {
@@ -42,6 +43,39 @@ function renderWorkspace(workspace, options) {
 
 	const showLetter = shouldShowMarkerLetter(options)
 	updateFavicon(color, workspace.name, showLetter)
+}
+
+function wireCopyButton(workspace) {
+	const button = document.getElementById("copy-tabs-button")
+	const feedback = document.getElementById("copy-feedback")
+
+	if (!button) {
+		return
+	}
+
+	button.addEventListener("click", async () => {
+		if (!workspace?.tabs) return
+
+		const lines = workspace.tabs.map((tab) => {
+			const title = tab.title?.trim() || "(Untitled)"
+			const url = tab.url || ""
+			return `${title}\n${url}`
+		}).join("\n\n")
+
+		try {
+			await navigator.clipboard.writeText(lines)
+			if (feedback) {
+				feedback.textContent = "Copied workspace tabs to clipboard."
+				setTimeout(() => (feedback.textContent = ""), 3000)
+			}
+		} catch (error) {
+			console.error("Failed to copy workspace tabs", error)
+			if (feedback) {
+				feedback.textContent = "Failed to copy. Please try again."
+				setTimeout(() => (feedback.textContent = ""), 3000)
+			}
+		}
+	})
 }
 
 function renderError(message) {
