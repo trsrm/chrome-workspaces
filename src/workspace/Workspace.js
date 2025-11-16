@@ -65,43 +65,16 @@ const Workspace = {
 	 },
 
 	/**
-	 * Create tab group with workspace tabs
-	 * @param {string} workspaceId 
+	 * Legacy hook kept for compatibility with existing calls.
+	 * Tab groups have been removed, so activating a workspace is now a no-op.
 	 */
-	async activate(workspaceId) {
-		const windowId = await Workspace.getWindowId(workspaceId)
-		if (!windowId) return
-
-		const workspace = await Workspace.get(workspaceId)
-		let groupId = await Workspace.getGroupId(workspaceId)
-
-		const tabs = await chrome.tabs.query({ windowId })
-		const tabIdsToGroup = tabs.filter(tab => !tab.pinned && tab.groupId !== groupId).map((tab) => tab.id)
-
-		if (tabIdsToGroup.length > 0) {
-			groupId = await chrome.tabs.group({ tabIds: tabIdsToGroup, groupId })
-		}
-		
-		if (workspace && groupId) {
-			await chrome.tabGroups.update(groupId, { title: workspace.name, color: workspace.color })
-		}
-	},
+	async activate() {},
 
 	/**
-	 * Ungroup workspace tabs
-	 * @param {string} workspaceId
+	 * Legacy hook kept for compatibility with existing calls.
+	 * Without tab groups there is nothing to deactivate.
 	 */
-	async deactivate(workspaceId) {
-		const windowId = await Workspace.getWindowId(workspaceId)
-		if (!windowId) return
-
-		const tabs = await chrome.tabs.query({ windowId })
-		const tabIds = tabs.map((tab) => tab.id)
-
-		if (tabIds.length > 0) {
-			await chrome.tabs.ungroup(tabIds)
-		}
-	},
+	async deactivate() {},
 
 	/**
 	 * Get workspace by ID.
@@ -121,19 +94,6 @@ const Workspace = {
 		assert(workspace.tabs.every(tab => typeof tab === "object"))
 
 		await Storage.set(workspace.id, workspace)
-
-		const windowId = await Workspace.getWindowId(workspace.id)
-		if (!windowId) return
-
-		const [group] = await chrome.tabGroups.query({ windowId })
-		if (!group) return
-
-		if (group.title !== workspace.name || group.color !== workspace.color) {
-			await chrome.tabGroups.update(group.id, {
-				title: workspace.name,
-				color: workspace.color,
-			})
-		}
 	},
 
 	/**
@@ -141,12 +101,8 @@ const Workspace = {
 	 * @param {string} workspaceId
 	 */
 	async remove(workspaceId) {
-		try {
-			await Workspace.deactivate(workspaceId)
-		} finally {
-			await WorkspaceList.remove(workspaceId)
-			await Storage.remove(workspaceId)
-		}
+		await WorkspaceList.remove(workspaceId)
+		await Storage.remove(workspaceId)
 	},
 
 	/**
@@ -175,16 +131,11 @@ const Workspace = {
 	},
 
 	/**
-	 * Get a Tab Group ID associated with the workspace
-	 * @param {string} workspaceId
+	 * Legacy helper retained for API compatibility.
+	 * Always returns null because tab groups are no longer used.
 	 */
-	async getGroupId(workspaceId) {
-		const windowId = await Workspace.getWindowId(workspaceId)
-		if (!windowId) return
-
-		const [group] = await chrome.tabGroups.query({ windowId })
-		
-		return group?.id
+	async getGroupId() {
+		return null
 	}
 }
 

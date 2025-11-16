@@ -27,8 +27,6 @@ chrome.tabs.onRemoved.addListener(handleTabRemove)
 chrome.tabs.onUpdated.addListener(handleTabUpdate)
 chrome.tabs.onAttached.addListener(handleTabAttach)
 chrome.tabs.onDetached.addListener(handleTabDetach)
-chrome.tabGroups.onCreated.addListener(handleTabGroupCreate)
-chrome.tabGroups.onUpdated.addListener(handleTabGroupUpdate)
 chrome.windows.onCreated.addListener(handleWindowOpen)
 chrome.windows.onRemoved.addListener(handleWindowClose)
 
@@ -67,7 +65,7 @@ async function handleTabCreate(tab) {
 	const openingWorkspace = await Config.get(Config.Key.OPENING_WORKSPACE)
 	if (openingWorkspace) return
 
-	await addTabToGroup(tab.id, tab.windowId);
+	WorkspaceUpdateService.scheduleUpdate(tab.windowId)
 }
 
 async function handleTabMove(tabId, { windowId }) {
@@ -93,23 +91,9 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 		PermissionsService.checkLocalFileAccess(tab)
 		WorkspaceUpdateService.scheduleUpdate(tab.windowId)
 	}
-
-	if (changeInfo.pinned === false) {
-		await addTabToGroup(tabId, tab.windowId)
-	}
 }
 
 async function handleTabAttach(tabId, attachInfo) {
-	for (let attempt = 0; attempt < 10; attempt++) {
-		try {
-			await addTabToGroup(tabId, attachInfo.newWindowId)
-			break
-		} catch {
-			// Tab cannot be edited while user is dragging it
-			await new Promise((resolve) => setTimeout(resolve, 500))
-		}
-	}
-
 	WorkspaceUpdateService.scheduleUpdate(attachInfo.newWindowId)
 }
 
@@ -117,62 +101,12 @@ async function handleTabDetach(tabId, { oldWindowId }) {
 	WorkspaceUpdateService.scheduleUpdate(oldWindowId)
 }
 
-async function handleTabGroupCreate(group) {
-	const openingWorkspace = await Config.get(Config.Key.OPENING_WORKSPACE)
-	if (openingWorkspace) return
-
-	const workspaceId = await WorkspaceList.findWorkspaceForWindow(group.windowId)
-	if (!workspaceId) return
-
-	const workspaceGroupId = await Workspace.getGroupId(workspaceId)
-	if (!workspaceGroupId) return
-
-	if (workspaceGroupId !== group.id) {
-		// We do not allow other tab groups inside workspace
-		const tabs = await chrome.tabs.query({ groupId: group.id })
-
-		if (tabs.length > 0) {
-			await chrome.tabs.group({
-				groupId: workspaceGroupId,
-				tabIds: tabs.map((tab) => tab.id)
-			})
-		}
-	}
-}
-
-async function handleTabGroupUpdate(group) {
-	const openingWorkspace = await Config.get(Config.Key.OPENING_WORKSPACE)
-	if (openingWorkspace) return
-
-	const workspaceId = await WorkspaceList.findWorkspaceForWindow(group.windowId)
-	if (!workspaceId) return
-
-	const workspaceGroupId = await Workspace.getGroupId(workspaceId)
-	if (workspaceGroupId !== group.id) return;
-
-	if (!group.title) {
-		// Group title is empty -> reset with the workspace name
-		await Workspace.activate(workspaceId)
-		return
-	}
-
-	await Workspace.update(workspaceId, {
-		name: group.title,
-		color: group.color,
-	})
-}
-
 async function handleWindowOpen(window) {
 	const openingWorkspace = await Config.get(Config.Key.OPENING_WORKSPACE)
 
-	if (openingWorkspace || window.type !== WindowType.NORMAL) {
-		return
-	}
-
-	const workspaceId = await findMatchingWorkspace(window)
-	if (workspaceId) {
-		await WorkspaceList.update(workspaceId, window.id)
-	}
+	if (openingWorkspace || window.type !== WindowType.NORMAL) return
+	// Workspace windows are now tracked solely through WorkspaceList updates
+	// triggered by explicit open actions.
 }
 
 async function handleWindowClose(windowId) {
@@ -198,37 +132,3 @@ async function handleInstall({ reason, previousVersion }) {
 }
 
 // ----------------------------------------------------------------------------
-
-async function addTabToGroup(tabId, windowId) {
-	const workspaceId = await WorkspaceList.findWorkspaceForWindow(windowId)
-	if (!workspaceId) return
-
-	const groupId = await Workspace.getGroupId(workspaceId)
-
-	if (groupId) {
-		await chrome.tabs.group({ groupId, tabIds: tabId })
-	} else {
-		await Workspace.activate(workspaceId)
-	}
-}
-
-async function findMatchingWorkspace(window) {
-	const tabGroups = await chrome.tabGroups.query({ windowId: window.id })
-	if (tabGroups.length !== 1) return
-
-	const { title, color } = tabGroups[0]
-	let workspaceIds = await WorkspaceList.getWorkspaceIds()
-	
-	const lastWorkspaceId = await Config.get(Config.Key.LAST_WORKSPACE_ID)
-	if (workspaceIds.includes(lastWorkspaceId)) {
-		// Search optimization
-		workspaceIds = [...new Set([lastWorkspaceId, ...workspaceIds])]
-	}
-
-	for (const workspaceId of workspaceIds) {
-		const workspace = await Workspace.get(workspaceId)
-		if (workspace && workspace.name === title && workspace.color === color) {
-			return workspace.id
-		}
-	}
-}

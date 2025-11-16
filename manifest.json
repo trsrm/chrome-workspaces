@@ -32,8 +32,7 @@
   "permissions": [
     "contextMenus",
     "storage",
-    "tabs",
-    "tabGroups"
+    "tabs"
   ],
   "optional_host_permissions": [
     "file://*/*"
