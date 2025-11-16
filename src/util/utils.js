@@ -3,9 +3,14 @@ export function randomString(length) {
 }
 
 export function getUrlParams(url) {
-	return Object.fromEntries(
-		url.split("?")[1].split("&").map(keyValue => keyValue.split("="))
-	);
+	if (!url) return {}
+
+	try {
+		const searchParams = new URL(url).searchParams
+		return Object.fromEntries(searchParams.entries())
+	} catch {
+		return {}
+	}
 }
 
 export const WORKSPACE_MARKER_PATH = "src/pages/workspace-marker/workspace-marker.html"

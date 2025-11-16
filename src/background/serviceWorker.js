@@ -10,6 +10,7 @@ import WorkspaceOpenService from "../service/WorkspaceOpenService.js"
 import ContextMenuService from "../service/ContextMenuService.js"
 import PermissionsService from "../service/PermissionsService.js"
 import Observable from "../util/Observable.js"
+import { getUrlParams, isWorkspaceMarkerUrl } from "../util/utils.js"
 
 globalThis.isBackground = true
 
@@ -104,9 +105,13 @@ async function handleTabDetach(tabId, { oldWindowId }) {
 async function handleWindowOpen(window) {
 	const openingWorkspace = await Config.get(Config.Key.OPENING_WORKSPACE)
 
-	if (openingWorkspace || window.type !== WindowType.NORMAL) return
-	// Workspace windows are now tracked solely through WorkspaceList updates
-	// triggered by explicit open actions.
+	if (window.type !== WindowType.NORMAL) return
+	if (openingWorkspace) return
+
+	const workspaceId = await findWorkspaceForWindowByMarker(window.id)
+	if (workspaceId) {
+		await WorkspaceList.update(workspaceId, window.id)
+	}
 }
 
 async function handleWindowClose(windowId) {
@@ -132,3 +137,31 @@ async function handleInstall({ reason, previousVersion }) {
 }
 
 // ----------------------------------------------------------------------------
+
+async function findWorkspaceForWindowByMarker(windowId) {
+	if (!windowId) return null
+
+	const tabs = await chrome.tabs.query({ windowId })
+	const markerTabs = tabs.filter((tab) => isWorkspaceMarkerUrl(tab.url ?? tab.pendingUrl))
+
+	if (markerTabs.length === 0) {
+		return null
+	}
+
+	if (markerTabs.length > 1) {
+		console.warn(`Multiple workspace markers found in window ${windowId}. Using the first marker.`)
+	}
+
+	for (const markerTab of markerTabs) {
+		const params = getUrlParams(markerTab.url ?? markerTab.pendingUrl ?? "")
+		const workspaceId = params.workspaceId
+		if (!workspaceId) continue
+
+		const workspace = await Workspace.get(workspaceId)
+		if (workspace) {
+			return workspace.id
+		}
+	}
+
+	return null
+}
